@@ -5,7 +5,7 @@ services:
     env: node
     plan: starter
     region: oregon
-    buildCommand: NODE_ENV=production npm install && npm -w @pp/server run build
+    buildCommand: buildCommand: npm install && npm install --include=dev && npm -w @pp/server run build
     startCommand: npm -w @pp/server run start
     envVars:
       - key: NODE_ENV

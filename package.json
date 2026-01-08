@@ -10,6 +10,7 @@
     "typecheck": "npm -w @pp/server run typecheck && npm -w @pp/web run typecheck"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "concurrently": "^9.2.0"
   }
 }
