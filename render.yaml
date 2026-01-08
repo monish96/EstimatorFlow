@@ -1,0 +1,26 @@
+services:
+  # Socket.io Server (Web Service)
+  - type: web
+    name: estimateflow-server
+    env: node
+    plan: starter
+    region: oregon
+    buildCommand: npm install && npm -w @pp/server run build
+    startCommand: npm -w @pp/server run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CLIENT_ORIGIN
+        sync: false  # Update this after web app is deployed: https://estimateflow.onrender.com
+
+static_sites:
+  # React Web App (Static Site)
+  - name: estimateflow
+    buildCommand: npm install && npm -w @pp/web run build
+    publishPath: apps/web/dist
+    envVars:
+      - key: VITE_SERVER_URL
+        value: https://estimateflow-server.onrender.com
+

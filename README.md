@@ -89,26 +89,42 @@ planningpoker/
 
 ## 🚢 Deployment
 
-### Web (Vercel) ✅
+### Render (Recommended) ✅
 
-Deploy the React app (`apps/web`) to Vercel as a static site:
+Deploy both server and web app to Render using the included `render.yaml`:
 
+1. **Push to GitHub** (if not already done)
+2. **Go to Render Dashboard** → "New +" → "Blueprint"
+3. **Connect your repository** - Render will auto-detect `render.yaml`
+4. **Apply the blueprint** - This creates both services:
+   - `estimateflow-server` (Web Service for Socket.io)
+   - `estimateflow` (Static Site for React app)
+5. **Update CORS**: After deployment, set `CLIENT_ORIGIN` in server to your static site URL
+
+See [RENDER_DEPLOY.md](./RENDER_DEPLOY.md) for detailed step-by-step instructions.
+
+### Alternative: Vercel + Render
+
+**Web (Vercel):**
+- Deploy the React app (`apps/web`) to Vercel as a static site
 - **Root Directory**: `apps/web`
 - **Build Command**: `npm run build`
 - **Output Directory**: `dist`
-- **Environment Variable**: Set `VITE_SERVER_URL` to your deployed realtime server URL (e.g. `https://estimateflow-server.example.com`)
+- **Environment Variable**: Set `VITE_SERVER_URL` to your Render server URL
 
-### Realtime Server (Socket.io) ⚠️
+**Server (Render):**
+- Deploy `apps/server` as a Web Service on Render
+- See `RENDER_DEPLOY.md` for server deployment steps
 
-Socket.io requires a long-lived process with WebSocket support. **Vercel serverless functions are not suitable for this**.
+### Other Platforms
 
-**Recommended platforms:**
+Socket.io requires a long-lived process with WebSocket support. **Vercel serverless functions are not suitable for the server**.
+
+**Recommended platforms for server:**
+- [Render](https://render.com) - Simple setup (✅ included config)
 - [Fly.io](https://fly.io) - Great for WebSocket apps
 - [Railway](https://railway.app) - Easy deployment
-- [Render](https://render.com) - Simple setup
 - [DigitalOcean App Platform](https://www.digitalocean.com/products/app-platform)
-
-After deploying the server, update the `VITE_SERVER_URL` environment variable in your Vercel deployment.
 
 ## 🎨 Theme
 
