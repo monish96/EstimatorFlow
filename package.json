@@ -1,0 +1,17 @@
+{
+  "name": "planningpoker",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c magenta,cyan \"npm -w @pp/server run dev\" \"npm -w @pp/web run dev\"",
+    "build": "npm -w @pp/server run build && npm -w @pp/web run build",
+    "typecheck": "npm -w @pp/server run typecheck && npm -w @pp/web run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}
+
+
