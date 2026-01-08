@@ -342,6 +342,75 @@ io.on("connection", (socket) => {
     emitSession(session);
   });
 
+  socket.on("session:snapshot", (payload: { sessionId: string }, ack?: (resp: any) => void) => {
+    const session = sessions.get(payload.sessionId);
+    if (!session) {
+      ack?.({ ok: false, error: "session_not_found" });
+      return;
+    }
+    const p = session.participants[socket.id];
+    if (!p?.isHost) {
+      ack?.({ ok: false, error: "host_only" });
+      return;
+    }
+
+    const snapshot = {
+      sessionId: session.id,
+      createdAt: session.createdAt,
+      exportedAt: now(),
+      participants: Object.values(session.participants).map((p) => ({
+        id: p.id,
+        name: p.name,
+        color: p.color,
+        isHost: p.isHost,
+        isObserver: p.isObserver,
+        joinedAt: p.joinedAt
+      })),
+      stories: session.stories.map((s) => ({
+        id: s.id,
+        title: s.title,
+        notes: s.notes,
+        createdAt: s.createdAt,
+        finalized: s.finalized
+      })),
+      currentStoryId: session.currentStoryId,
+      round: {
+        storyId: session.round.storyId,
+        revealed: session.round.revealed,
+        votesByParticipantId: { ...session.round.votesByParticipantId },
+        updatedAt: session.round.updatedAt
+      }
+    };
+    ack?.({ ok: true, snapshot });
+  });
+
+  socket.on("session:clear", (payload: { sessionId: string }, ack?: (resp: any) => void) => {
+    const session = sessions.get(payload.sessionId);
+    if (!session) {
+      ack?.({ ok: false, error: "session_not_found" });
+      return;
+    }
+    const p = session.participants[socket.id];
+    if (!p?.isHost) {
+      ack?.({ ok: false, error: "host_only" });
+      return;
+    }
+
+    // Clear all session data
+    session.participants = {};
+    session.stories = [];
+    session.currentStoryId = null;
+    session.round = {
+      storyId: null,
+      revealed: false,
+      votesByParticipantId: {},
+      updatedAt: now()
+    };
+
+    emitSession(session);
+    ack?.({ ok: true });
+  });
+
   socket.on("disconnect", () => {
     // remove from all sessions it might be in (typically 1)
     for (const session of sessions.values()) {

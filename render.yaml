@@ -6,7 +6,7 @@ services:
     plan: starter
     region: oregon
     buildCommand: NODE_ENV= npm install && npm -w @pp/server run build
-    startCommand: npm -w @pp/server run start
+    startCommand: cd apps/server && node dist/index.js
     envVars:
       - key: NODE_ENV
         value: production

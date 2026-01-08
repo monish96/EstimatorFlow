@@ -5,12 +5,14 @@ import {
   CheckCircle2,
   Copy,
   Crown,
+  Download,
   Eye,
   EyeOff,
   Loader2,
   LogOut,
   RefreshCcw,
-  Sparkles
+  Sparkles,
+  Trash2
 } from "lucide-react";
 import { nanoid } from "nanoid";
 import { createSocket, SessionUpdate, VoteValue } from "../lib/socket";
@@ -259,6 +261,48 @@ export function SessionRoom() {
     sockRef.current?.emit("round:finalize", { sessionId, value });
   }
 
+  function exportSnapshot() {
+    if (!isHost) {
+      toast("Host only", "Only the host can export session data.");
+      return;
+    }
+    sockRef.current?.emit("session:snapshot", { sessionId }, (resp: any) => {
+      if (!resp?.ok) {
+        toast("Export failed", resp?.error || "Could not export snapshot.");
+        return;
+      }
+      const snapshot = resp.snapshot;
+      const dataStr = JSON.stringify(snapshot, null, 2);
+      const dataBlob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `estimateflow-snapshot-${sessionId}-${Date.now()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast("Snapshot exported", "Session data downloaded as JSON.");
+    });
+  }
+
+  function clearSessionData() {
+    if (!isHost) {
+      toast("Host only", "Only the host can clear session data.");
+      return;
+    }
+    if (!window.confirm("Are you sure you want to clear all session data? This will remove all stories, participants, and votes. This action cannot be undone.")) {
+      return;
+    }
+    sockRef.current?.emit("session:clear", { sessionId }, (resp: any) => {
+      if (!resp?.ok) {
+        toast("Clear failed", resp?.error || "Could not clear session data.");
+        return;
+      }
+      toast("Session cleared", "All data has been removed from the server.");
+    });
+  }
+
   const revealed = Boolean(round?.revealed);
   const votes = round?.votesByParticipantId ?? {};
   const voteValues = Object.values(votes).filter((v): v is string => Boolean(v));
@@ -289,6 +333,16 @@ export function SessionRoom() {
               persistSettings({ screenShare: !screenShare, hideMyVote: !screenShare ? true : hideMyVote })
             }
           />
+          {isHost && (
+            <>
+              <button className="btn" onClick={exportSnapshot} title="Export session snapshot as JSON">
+                <Download size={18} /> Export
+              </button>
+              <button className="btn btnDanger" onClick={clearSessionData} title="Clear all session data from server">
+                <Trash2 size={18} /> Clear Data
+              </button>
+            </>
+          )}
           <button className="btn" onClick={copyLink}>
             <Copy size={18} /> Copy link
           </button>

@@ -5,6 +5,12 @@ A modern, professional real-time agile estimation tool with beautiful animations
 ![EstimateFlow Dashboard](https://via.placeholder.com/1200x600/6366f1/ffffff?text=EstimateFlow+Dashboard)
 *Modern, clean interface with smooth animations*
 
+## 🌐 Try It Live
+
+**Live Demo**: [https://estimateflow.onrender.com](https://estimateflow.onrender.com)
+
+Try EstimateFlow right now! Create a session, share the link with your team, and start estimating stories together in real-time.
+
 ## ✨ Features
 
 - **Real-time Collaboration** - Instant synchronization across all participants
@@ -88,6 +94,8 @@ planningpoker/
 ```
 
 ## 🚢 Deployment
+
+**Live Deployment**: EstimateFlow is currently deployed and running at [https://estimateflow.onrender.com](https://estimateflow.onrender.com)
 
 ### Render (Recommended) ✅
 
