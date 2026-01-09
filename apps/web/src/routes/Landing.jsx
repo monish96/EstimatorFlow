@@ -6,7 +6,7 @@ import { loadProfile, saveProfile, setHostKey } from "../lib/storage";
 import { loadSettings, saveSettings } from "../lib/settings";
 import { SettingsMenu } from "../components/SettingsMenu";
 
-function parseSessionId(input: string): string {
+function parseSessionId(input) {
   const raw = input.trim();
   if (!raw) return "";
   try {
@@ -31,12 +31,12 @@ export function Landing() {
   const [darkMode, setDarkMode] = useState(initialSettings.darkMode);
   const [screenShare, setScreenShare] = useState(initialSettings.screenShare);
 
-  function persistName(n: string) {
+  function persistName(n) {
     setName(n);
     saveProfile({ name: n });
   }
 
-  function persistSettings(next: { observerMode?: boolean; darkMode?: boolean; screenShare?: boolean }) {
+  function persistSettings(next) {
     const s = loadSettings();
     const merged = {
       ...s,
@@ -53,8 +53,8 @@ export function Landing() {
   }, [darkMode]);
 
   React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
+    const onKey = (e) => {
+      const tag = e.target?.tagName?.toLowerCase();
       if (tag === "input" || tag === "textarea") return;
       const k = e.key.toLowerCase();
       if (k === "d") persistSettings({ darkMode: !darkMode });
@@ -129,7 +129,7 @@ export function Landing() {
 
           <div style={{ height: 14 }} />
           <div className="subtitle">
-            Tip: after you create a session, you’ll get a share button to copy the link.
+            Tip: after you create a session, you'll get a share button to copy the link.
           </div>
         </div>
 
@@ -155,7 +155,7 @@ export function Landing() {
 
           <div style={{ height: 14 }} />
           <div className="subtitle">
-            If you don’t have a link yet, ask the host to click “Copy link”.
+            If you don't have a link yet, ask the host to click "Copy link".
           </div>
         </div>
       </div>
@@ -163,5 +163,4 @@ export function Landing() {
     </>
   );
 }
-
 

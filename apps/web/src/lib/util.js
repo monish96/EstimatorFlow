@@ -1,8 +1,8 @@
-export function cx(...xs: Array<string | false | null | undefined>) {
+export function cx(...xs) {
   return xs.filter(Boolean).join(" ");
 }
 
-export async function copyToClipboard(text: string) {
+export async function copyToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text);
     return true;
@@ -11,8 +11,7 @@ export async function copyToClipboard(text: string) {
   }
 }
 
-export function shortId(id: string) {
+export function shortId(id) {
   return id.slice(0, 4) + "…" + id.slice(-3);
 }
-
 

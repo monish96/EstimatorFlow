@@ -10,26 +10,19 @@ export function SettingsMenu({
   onToggleObserver,
   onToggleDark,
   onToggleScreenShare
-}: {
-  observerMode: boolean;
-  darkMode: boolean;
-  screenShare: boolean;
-  onToggleObserver: () => void;
-  onToggleDark: () => void;
-  onToggleScreenShare: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const wrapRef = useRef(null);
 
   const id = useMemo(() => `pp-settings-${Math.random().toString(16).slice(2)}`, []);
 
   useEffect(() => {
-    const onDown = (e: MouseEvent) => {
+    const onDown = (e) => {
       const el = wrapRef.current;
       if (!el) return;
       if (e.target instanceof Node && !el.contains(e.target)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => {
+    const onKey = (e) => {
       if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("mousedown", onDown);
@@ -78,5 +71,4 @@ export function SettingsMenu({
     </div>
   );
 }
-
 

@@ -9,13 +9,6 @@ export function SettingsPanel({
   onToggleObserver,
   onToggleDark,
   onToggleScreenShare
-}: {
-  observerMode: boolean;
-  darkMode: boolean;
-  screenShare: boolean;
-  onToggleObserver: () => void;
-  onToggleDark: () => void;
-  onToggleScreenShare: () => void;
 }) {
   return (
     <div className="glass card">
@@ -30,7 +23,7 @@ export function SettingsPanel({
           <UserRoundSearch size={22} />
           <div>
             <div className="toggleTitle">Observer mode</div>
-            <div className="toggleSub">Join the room, but don’t vote</div>
+            <div className="toggleSub">Join the room, but don't vote</div>
           </div>
         </div>
         <button
@@ -85,5 +78,4 @@ export function SettingsPanel({
     </div>
   );
 }
-
 

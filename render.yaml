@@ -5,8 +5,8 @@ services:
     env: node
     plan: starter
     region: oregon
-    buildCommand: NODE_ENV= npm install && npm -w @pp/server run build
-    startCommand: cd apps/server && node dist/index.js
+    buildCommand: npm install
+    startCommand: npm -w @pp/server run start
     envVars:
       - key: NODE_ENV
         value: production
@@ -23,4 +23,3 @@ static_sites:
     envVars:
       - key: VITE_SERVER_URL
         value: https://estimateflow-server.onrender.com
-

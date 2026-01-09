@@ -1,56 +1,8 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import cors from "cors";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 import { nanoid } from "nanoid";
-
-type VoteValue = string; // keep flexible for "☕" / "?" etc
-
-type Participant = {
-  id: string;
-  name: string;
-  color: string;
-  isHost: boolean;
-  isObserver: boolean;
-  joinedAt: number;
-};
-
-type Story = {
-  id: string;
-  title: string;
-  notes?: string;
-  createdAt: number;
-  finalized?: {
-    value: VoteValue;
-    by: string;
-    at: number;
-  };
-};
-
-type RoundState = {
-  storyId: string | null;
-  revealed: boolean;
-  votesByParticipantId: Record<string, VoteValue | null>;
-  updatedAt: number;
-};
-
-type Session = {
-  id: string;
-  createdAt: number;
-  hostKey?: string;
-  participants: Record<string, Participant>;
-  stories: Story[];
-  currentStoryId: string | null;
-  round: RoundState;
-};
-
-type ClientHello = {
-  sessionId: string;
-  name: string;
-  asHost?: boolean;
-  observer?: boolean;
-  hostKey?: string;
-};
 
 // Use a dev-friendly port unlikely to collide with Vite (which prefers 5173/5174/etc.)
 const PORT = Number(process.env.PORT ?? 5050);
@@ -63,7 +15,7 @@ function parseAllowedOrigins() {
 
 const allowedOrigins = parseAllowedOrigins();
 
-function isAllowedOrigin(origin?: string) {
+function isAllowedOrigin(origin) {
   if (!origin) return true;
   if (allowedOrigins) return allowedOrigins.includes(origin);
   // dev default: allow any localhost origin
@@ -79,7 +31,7 @@ app.use(
     credentials: true
   })
 );
-app.get("/health", (_req: Request, res: Response) => res.json({ ok: true }));
+app.get("/health", (_req, res) => res.json({ ok: true }));
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -91,13 +43,13 @@ const io = new Server(httpServer, {
   }
 });
 
-const sessions = new Map<string, Session>();
+const sessions = new Map();
 
 function now() {
   return Date.now();
 }
 
-function pickColor(seed: string) {
+function pickColor(seed) {
   // deterministic modern palette
   const colors = [
     "#6366f1",
@@ -114,10 +66,10 @@ function pickColor(seed: string) {
   return colors[h % colors.length];
 }
 
-function createSession(sessionId?: string): Session {
+function createSession(sessionId) {
   const id = sessionId ?? nanoid(10);
   const createdAt = now();
-  const emptyRound: RoundState = {
+  const emptyRound = {
     storyId: null,
     revealed: false,
     votesByParticipantId: {},
@@ -134,7 +86,7 @@ function createSession(sessionId?: string): Session {
   };
 }
 
-function ensureSession(sessionId: string): Session {
+function ensureSession(sessionId) {
   const existing = sessions.get(sessionId);
   if (existing) return existing;
   const created = createSession(sessionId);
@@ -142,24 +94,24 @@ function ensureSession(sessionId: string): Session {
   return created;
 }
 
-function getHostId(session: Session): string | null {
+function getHostId(session) {
   const p = Object.values(session.participants).find((x) => x.isHost);
   return p?.id ?? null;
 }
 
-function setHost(session: Session, participantId: string) {
+function setHost(session, participantId) {
   for (const pid of Object.keys(session.participants)) {
     session.participants[pid] = { ...session.participants[pid], isHost: pid === participantId };
   }
 }
 
-function assignHostIfNeeded(session: Session) {
+function assignHostIfNeeded(session) {
   if (getHostId(session)) return;
   const oldest = Object.values(session.participants).sort((a, b) => a.joinedAt - b.joinedAt)[0];
   if (oldest) setHost(session, oldest.id);
 }
 
-function resetRound(session: Session, storyId: string | null) {
+function resetRound(session, storyId) {
   session.round = {
     storyId,
     revealed: false,
@@ -170,7 +122,7 @@ function resetRound(session: Session, storyId: string | null) {
   };
 }
 
-function emitSession(session: Session) {
+function emitSession(session) {
   io.to(session.id).emit("session:update", {
     sessionId: session.id,
     createdAt: session.createdAt,
@@ -182,7 +134,7 @@ function emitSession(session: Session) {
 }
 
 io.on("connection", (socket) => {
-  socket.on("session:join", (hello: ClientHello, ack?: (resp: any) => void) => {
+  socket.on("session:join", (hello, ack) => {
     try {
       const session = ensureSession(hello.sessionId);
       const participantId = socket.id;
@@ -219,12 +171,12 @@ io.on("connection", (socket) => {
       socket.join(session.id);
       emitSession(session);
       ack?.({ ok: true, sessionId: session.id, participantId });
-    } catch (e: any) {
+    } catch (e) {
       ack?.({ ok: false, error: e?.message ?? "join_failed" });
     }
   });
 
-  socket.on("session:leave", (sessionId: string) => {
+  socket.on("session:leave", (sessionId) => {
     const session = sessions.get(sessionId);
     if (!session) return;
     delete session.participants[socket.id];
@@ -234,14 +186,14 @@ io.on("connection", (socket) => {
     socket.leave(session.id);
   });
 
-  socket.on("story:add", (payload: { sessionId: string; title: string; notes?: string }) => {
+  socket.on("story:add", (payload) => {
     const session = sessions.get(payload.sessionId);
     if (!session) return;
     const title = (payload.title || "").trim().slice(0, 120);
     const notes = (payload.notes || "").trim().slice(0, 800);
     if (!title) return;
 
-    const story: Story = { id: nanoid(8), title, notes: notes || undefined, createdAt: now() };
+    const story = { id: nanoid(8), title, notes: notes || undefined, createdAt: now() };
     session.stories.push(story);
 
     if (!session.currentStoryId) {
@@ -251,39 +203,36 @@ io.on("connection", (socket) => {
     emitSession(session);
   });
 
-  socket.on(
-    "participant:update",
-    (payload: { sessionId: string; name?: string; isObserver?: boolean; hostKey?: string }) => {
-      const session = sessions.get(payload.sessionId);
-      if (!session) return;
-      const p = session.participants[socket.id];
-      if (!p) return;
+  socket.on("participant:update", (payload) => {
+    const session = sessions.get(payload.sessionId);
+    if (!session) return;
+    const p = session.participants[socket.id];
+    if (!p) return;
 
-      const nextName =
-        typeof payload.name === "string" ? payload.name.trim().slice(0, 32) : undefined;
-      const nextObserver = typeof payload.isObserver === "boolean" ? payload.isObserver : undefined;
-      const presentedHostKey = typeof payload.hostKey === "string" ? payload.hostKey.slice(0, 80) : "";
-      const canClaimHost = Boolean(presentedHostKey) && session.hostKey === presentedHostKey;
+    const nextName =
+      typeof payload.name === "string" ? payload.name.trim().slice(0, 32) : undefined;
+    const nextObserver = typeof payload.isObserver === "boolean" ? payload.isObserver : undefined;
+    const presentedHostKey = typeof payload.hostKey === "string" ? payload.hostKey.slice(0, 80) : "";
+    const canClaimHost = Boolean(presentedHostKey) && session.hostKey === presentedHostKey;
 
-      session.participants[socket.id] = {
-        ...p,
-        name: nextName ?? p.name,
-        isObserver: nextObserver ?? p.isObserver
-      };
+    session.participants[socket.id] = {
+      ...p,
+      name: nextName ?? p.name,
+      isObserver: nextObserver ?? p.isObserver
+    };
 
-      if (canClaimHost) setHost(session, socket.id);
+    if (canClaimHost) setHost(session, socket.id);
 
-      // If they become an observer, clear any vote they previously set
-      if (nextObserver === true && session.round.votesByParticipantId[socket.id] != null) {
-        session.round.votesByParticipantId[socket.id] = null;
-        session.round.updatedAt = now();
-      }
-
-      emitSession(session);
+    // If they become an observer, clear any vote they previously set
+    if (nextObserver === true && session.round.votesByParticipantId[socket.id] != null) {
+      session.round.votesByParticipantId[socket.id] = null;
+      session.round.updatedAt = now();
     }
-  );
 
-  socket.on("story:setCurrent", (payload: { sessionId: string; storyId: string }) => {
+    emitSession(session);
+  });
+
+  socket.on("story:setCurrent", (payload) => {
     const session = sessions.get(payload.sessionId);
     if (!session) return;
     const p = session.participants[socket.id];
@@ -295,7 +244,7 @@ io.on("connection", (socket) => {
     emitSession(session);
   });
 
-  socket.on("vote:set", (payload: { sessionId: string; value: VoteValue }) => {
+  socket.on("vote:set", (payload) => {
     const session = sessions.get(payload.sessionId);
     if (!session) return;
     if (!session.currentStoryId) return;
@@ -309,7 +258,7 @@ io.on("connection", (socket) => {
     emitSession(session);
   });
 
-  socket.on("round:reveal", (payload: { sessionId: string }) => {
+  socket.on("round:reveal", (payload) => {
     const session = sessions.get(payload.sessionId);
     if (!session) return;
     const p = session.participants[socket.id];
@@ -319,7 +268,7 @@ io.on("connection", (socket) => {
     emitSession(session);
   });
 
-  socket.on("round:reset", (payload: { sessionId: string }) => {
+  socket.on("round:reset", (payload) => {
     const session = sessions.get(payload.sessionId);
     if (!session) return;
     const p = session.participants[socket.id];
@@ -328,7 +277,7 @@ io.on("connection", (socket) => {
     emitSession(session);
   });
 
-  socket.on("round:finalize", (payload: { sessionId: string; value: VoteValue }) => {
+  socket.on("round:finalize", (payload) => {
     const session = sessions.get(payload.sessionId);
     if (!session) return;
     const p = session.participants[socket.id];
@@ -342,7 +291,7 @@ io.on("connection", (socket) => {
     emitSession(session);
   });
 
-  socket.on("session:snapshot", (payload: { sessionId: string }, ack?: (resp: any) => void) => {
+  socket.on("session:snapshot", (payload, ack) => {
     const session = sessions.get(payload.sessionId);
     if (!session) {
       ack?.({ ok: false, error: "session_not_found" });
@@ -384,7 +333,7 @@ io.on("connection", (socket) => {
     ack?.({ ok: true, snapshot });
   });
 
-  socket.on("session:clear", (payload: { sessionId: string }, ack?: (resp: any) => void) => {
+  socket.on("session:clear", (payload, ack) => {
     const session = sessions.get(payload.sessionId);
     if (!session) {
       ack?.({ ok: false, error: "session_not_found" });
@@ -425,12 +374,10 @@ io.on("connection", (socket) => {
 });
 
 httpServer.listen(PORT, () => {
-  // eslint-disable-next-line no-console
   console.log(
     `[pp-server] listening on http://localhost:${PORT} (CORS ${
       allowedOrigins?.join(",") ?? "localhost:*"
     })`
   );
 });
-
 

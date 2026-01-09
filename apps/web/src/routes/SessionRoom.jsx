@@ -15,16 +15,16 @@ import {
   Trash2
 } from "lucide-react";
 import { nanoid } from "nanoid";
-import { createSocket, SessionUpdate, VoteValue } from "../lib/socket";
+import { createSocket } from "../lib/socket";
 import { getHostKey, loadProfile, saveProfile, setHostKey, upsertFinalize } from "../lib/storage";
 import { loadSettings, saveSettings } from "../lib/settings";
 import { copyToClipboard, cx, shortId } from "../lib/util";
-import { Toast, Toasts } from "../components/Toasts";
+import { Toasts } from "../components/Toasts";
 import { SettingsMenu } from "../components/SettingsMenu";
 
-const DECK: VoteValue[] = ["1", "2", "3", "5", "8", "13", "20", "40", "100", "?", "☕"];
+const DECK = ["1", "2", "3", "5", "8", "13", "20", "40", "100", "?", "☕"];
 
-function medianNumeric(values: string[]): string | null {
+function medianNumeric(values) {
   const nums = values.map((v) => Number(v)).filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
   if (!nums.length) return null;
   return String(nums[Math.floor(nums.length / 2)]);
@@ -42,22 +42,22 @@ export function SessionRoom() {
   const [name, setName] = useState(profile.name || "");
   const [socketReady, setSocketReady] = useState(false);
 
-  const sockRef = useRef<ReturnType<typeof createSocket> | null>(null);
-  const [meId, setMeId] = useState<string | null>(null);
-  const [state, setState] = useState<SessionUpdate | null>(null);
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  const sockRef = useRef(null);
+  const [meId, setMeId] = useState(null);
+  const [state, setState] = useState(null);
+  const [toasts, setToasts] = useState([]);
 
   const [storyTitle, setStoryTitle] = useState("");
   const [storyNotes, setStoryNotes] = useState("");
-  const [myVote, setMyVote] = useState<VoteValue | null>(null);
+  const [myVote, setMyVote] = useState(null);
 
   const [observerMode, setObserverMode] = useState(initialSettings.observerMode);
   const [darkMode, setDarkMode] = useState(initialSettings.darkMode);
   const [screenShare, setScreenShare] = useState(initialSettings.screenShare);
   const [hideMyVote, setHideMyVote] = useState(initialSettings.hideMyVote);
 
-  const seenFinalizeRef = useRef<Record<string, number>>({});
-  const hostKeyRef = useRef<string>("");
+  const seenFinalizeRef = useRef({});
+  const hostKeyRef = useRef("");
 
   const participants = state?.participants ?? [];
   const me = participants.find((p) => p.id === meId) ?? null;
@@ -66,7 +66,7 @@ export function SessionRoom() {
   const currentStory = stories.find((s) => s.id === state?.currentStoryId) ?? null;
   const round = state?.round ?? null;
 
-  function toast(title: string, body?: string) {
+  function toast(title, body) {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     setToasts((xs) => [...xs, { id, title, body }]);
     window.setTimeout(() => setToasts((xs) => xs.filter((t) => t.id !== id)), 2600);
@@ -103,7 +103,7 @@ export function SessionRoom() {
     }
   }, [name]);
 
-  function persistSettings(next: Partial<Parameters<typeof saveSettings>[0]>) {
+  function persistSettings(next) {
     const s = loadSettings();
     const merged = { ...s, ...next };
     saveSettings(merged);
@@ -128,8 +128,8 @@ export function SessionRoom() {
 
   // shortcuts: D/O/S/H (avoid typing inputs)
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
+    const onKey = (e) => {
+      const tag = e.target?.tagName?.toLowerCase();
       if (tag === "input" || tag === "textarea") return;
       const k = e.key.toLowerCase();
       if (k === "d") persistSettings({ darkMode: !darkMode });
@@ -163,9 +163,9 @@ export function SessionRoom() {
           observer: observerMode,
           hostKey: hostKeyRef.current || undefined
         },
-        (resp: any) => {
+        (resp) => {
           if (!resp?.ok) {
-            toast("Couldn’t join", resp?.error || "Unknown error");
+            toast("Couldn't join", resp?.error || "Unknown error");
             nav("/", { replace: true });
             return;
           }
@@ -177,7 +177,7 @@ export function SessionRoom() {
     const onDisconnect = () => setSocketReady(false);
     sock.on("connect", onConnect);
     sock.on("disconnect", onDisconnect);
-    sock.on("session:update", (u: SessionUpdate) => setState(u));
+    sock.on("session:update", (u) => setState(u));
 
     return () => {
       try {
@@ -218,7 +218,7 @@ export function SessionRoom() {
       if (seenFinalizeRef.current[key] === at) continue;
       seenFinalizeRef.current[key] = at;
       upsertFinalize(state.sessionId, { storyId: s.id, title: s.title, value: s.finalized.value, at });
-      toast("Saved locally", `“${s.title}” → ${s.finalized.value}`);
+      toast("Saved locally", `"${s.title}" → ${s.finalized.value}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.stories]);
@@ -234,14 +234,14 @@ export function SessionRoom() {
     sockRef.current?.emit("story:add", { sessionId, title: storyTitle, notes: storyNotes });
     setStoryTitle("");
     setStoryNotes("");
-    toast("Story added", "Let’s vibe.");
+    toast("Story added", "Let's vibe.");
   }
 
-  function setCurrentStory(storyId: string) {
+  function setCurrentStory(storyId) {
     sockRef.current?.emit("story:setCurrent", { sessionId, storyId });
   }
 
-  function setVote(value: VoteValue) {
+  function setVote(value) {
     if (observerMode) {
       toast("Observer mode", "Disable observer mode to vote.");
       return;
@@ -257,7 +257,7 @@ export function SessionRoom() {
     sockRef.current?.emit("round:reset", { sessionId });
   }
 
-  function finalize(value: VoteValue) {
+  function finalize(value) {
     sockRef.current?.emit("round:finalize", { sessionId, value });
   }
 
@@ -266,7 +266,7 @@ export function SessionRoom() {
       toast("Host only", "Only the host can export session data.");
       return;
     }
-    sockRef.current?.emit("session:snapshot", { sessionId }, (resp: any) => {
+    sockRef.current?.emit("session:snapshot", { sessionId }, (resp) => {
       if (!resp?.ok) {
         toast("Export failed", resp?.error || "Could not export snapshot.");
         return;
@@ -294,7 +294,7 @@ export function SessionRoom() {
     if (!window.confirm("Are you sure you want to clear all session data? This will remove all stories, participants, and votes. This action cannot be undone.")) {
       return;
     }
-    sockRef.current?.emit("session:clear", { sessionId }, (resp: any) => {
+    sockRef.current?.emit("session:clear", { sessionId }, (resp) => {
       if (!resp?.ok) {
         toast("Clear failed", resp?.error || "Could not clear session data.");
         return;
@@ -305,7 +305,7 @@ export function SessionRoom() {
 
   const revealed = Boolean(round?.revealed);
   const votes = round?.votesByParticipantId ?? {};
-  const voteValues = Object.values(votes).filter((v): v is string => Boolean(v));
+  const voteValues = Object.values(votes).filter((v) => Boolean(v));
   const suggested = medianNumeric(voteValues);
   const voterCount = participants.filter((p) => !p.isObserver).length;
 
@@ -492,7 +492,7 @@ export function SessionRoom() {
           ) : currentStory ? (
             <>
               <div className="subtitle" style={{ marginBottom: 10 }}>
-                Pick a card. Host reveals when everyone’s ready.
+                Pick a card. Host reveals when everyone's ready.
               </div>
               <div className="deck" aria-label="Estimation cards">
                 {DECK.map((v) => (
@@ -589,5 +589,4 @@ export function SessionRoom() {
     </>
   );
 }
-
 
